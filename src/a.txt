@@ -149,4 +149,13 @@ A6: To extend the design, we would:
    - If adding a unit to an existing dimension (e.g., lbs to Weight), add its conversion factor relative to the base (e.g., 1 kg = 2.20462 lbs).
    - If adding a new dimension (e.g., Imperial Volume with gal), define a new dimension mapping and list compatible units and their factors relative to a base (e.g., gal and qt with base gal).
 3. The rest of the checkout, rounding, and audit code is dimension-agnostic and will automatically support it.
+
+Q7: Briefly describe the overall architecture of your application (frontend, backend, database, and any important libraries).
+A7: The application is built on a full-stack Next.js 15 framework using the App Router. The Frontend consists of interactive React 19 pages styled with Vanilla CSS (the custom Obsidian Emerald theme). The Backend is handled natively within Next.js API Route handlers (src/app/api/*). The Database is a Neon-hosted serverless PostgreSQL instance. Key libraries include big.js for exact decimal calculations, jose for secure JWT signature verification inside Next.js edge-compatible middleware, and lucide-react for modern icon components.
+
+Q8: How is authentication implemented, and how do you separate Admin and Seller/User access? (Paragraph)
+A8: Authentication is implemented natively using JSON Web Tokens (JWT) signed with a custom server-side JWT_SECRET. When a user logs in, the API generates a JWT containing their ID, email, and role ('admin', 'seller', 'user'), and stores it in a secure, HttpOnly, SameSite=Lax cookie (auth_token). Next.js Middleware intercepts all dashboard requests (/dashboard/:role*), decrypts the JWT cookie, and checks the user's role: admins are restricted to /dashboard/admin/*, sellers to /dashboard/seller/*, and buyers to /dashboard/user/*. Any unauthorized attempts are immediately redirected to the appropriate portal or /login.
+
+Q9: How does your application connect to the Neon PostgreSQL database (for example, ORM or SQL client, environment variables)?
+A9: The application connects directly to the Neon PostgreSQL database using the native node-postgres client (pg library) via a pooled connection config (pg.Pool). The database connection string is retrieved securely from the server-side environment variable DATABASE_URL (configured locally in .env.local and in Vercel settings). Rather than using a heavy ORM, we write raw, parameterized SQL queries (SELECT, INSERT, UPDATE) to keep database interactions fast, lightweight, and to easily lock rows during checkout transactions using SELECT ... FOR UPDATE.
 ================================================================================
