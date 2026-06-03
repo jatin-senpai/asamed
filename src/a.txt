@@ -158,4 +158,10 @@ A8: Authentication is implemented natively using JSON Web Tokens (JWT) signed wi
 
 Q9: How does your application connect to the Neon PostgreSQL database (for example, ORM or SQL client, environment variables)?
 A9: The application connects directly to the Neon PostgreSQL database using the native node-postgres client (pg library) via a pooled connection config (pg.Pool). The database connection string is retrieved securely from the server-side environment variable DATABASE_URL (configured locally in .env.local and in Vercel settings). Rather than using a heavy ORM, we write raw, parameterized SQL queries (SELECT, INSERT, UPDATE) to keep database interactions fast, lightweight, and to easily lock rows during checkout transactions using SELECT ... FOR UPDATE.
+
+Q10: If the traffic to your app increased 10x, what part of your system would you improve first and why?
+A10: The database connection handling and row-locking concurrency model. Under 10x traffic:
+1. Connection Exhaustion: Serverless Next.js functions spin up dynamically and can quickly exhaust Neon's database connection pool. We would migrate to Neon's HTTP serverless SQL driver or tune PgBouncer connection pooling.
+2. Read Caching: Since catalog browsing is read-heavy, we would implement Redis or Next.js Edge Data Caching on the products endpoint to serve 90% of requests without hitting the database.
+3. Row Lock Contention: The eager `SELECT FOR UPDATE` locks can bottleneck throughput if many users try to buy the same product at once. We would migrate to an optimistic concurrency control model (using a version/updated_at check during updates) or a queue-based asynchronous processing system to process checkouts in a non-blocking queue.
 ================================================================================
