@@ -4,10 +4,11 @@ import Big from 'big.js';
 // Big.DP is the number of decimal places for division, default is 20
 Big.DP = 10;
 
-export type Unit = 'g' | 'kg' | 'mL' | 'L' | 'item';
+export type Unit = 'mg' | 'g' | 'kg' | 'mL' | 'L' | 'item';
 export type UnitDimension = 'weight' | 'volume' | 'count';
 
 export const UNIT_DIMENSIONS: Record<Unit, UnitDimension> = {
+  mg: 'weight',
   g: 'weight',
   kg: 'weight',
   mL: 'volume',
@@ -16,6 +17,7 @@ export const UNIT_DIMENSIONS: Record<Unit, UnitDimension> = {
 };
 
 export const UNIT_LABELS: Record<Unit, string> = {
+  mg: 'milligrams (mg)',
   g: 'grams (g)',
   kg: 'kilograms (kg)',
   mL: 'milliliters (mL)',
@@ -59,6 +61,18 @@ export function getConversionFactor(fromUnit: Unit, toBaseUnit: Unit): Big {
     return new Big(1000);
   }
   if (fromUnit === 'g' && toBaseUnit === 'kg') {
+    return new Big(0.001);
+  }
+  if (fromUnit === 'kg' && toBaseUnit === 'mg') {
+    return new Big(1000000);
+  }
+  if (fromUnit === 'mg' && toBaseUnit === 'kg') {
+    return new Big(0.000001);
+  }
+  if (fromUnit === 'g' && toBaseUnit === 'mg') {
+    return new Big(1000);
+  }
+  if (fromUnit === 'mg' && toBaseUnit === 'g') {
     return new Big(0.001);
   }
 
