@@ -1,0 +1,111 @@
+================================================================================
+AASAMEDCHEM: B2B MULTI-VENDOR MARKETPLACE SYSTEM WORKFLOW
+================================================================================
+
+This document explains the high-level architecture, user roles, database model,
+unit conversions, and platform commission workflows of the AasaMedChem inventory
+and order management system.
+
+--------------------------------------------------------------------------------
+1. SYSTEM ARCHITECTURE & ROLES
+--------------------------------------------------------------------------------
+The system is built on a full-stack Next.js architecture connected directly to a
+Neon PostgreSQL database. Authentication is handled using secure HttpOnly JWT 
+cookies. Next.js edge-compatible middleware protects role boundaries.
+
+The platform is designed around three distinct roles:
+1. User (Buyer): A customer (e.g. pharmacy or distributor) who browses products,
+   places order quotations using flexible unit selections, and requests custom
+   medicines if they are out of stock.
+2. Seller (Supplier): A supplier who lists their own chemical products, defines
+   their preferred base unit and base price, maintains inventory stock, and logs
+   received orders.
+3. Admin (Marketplace Coordinator): An administrator who oversees transactions,
+   approves or rejects order quotations, coordinates custom medicine requests, and
+   collects platform commissions.
+
+--------------------------------------------------------------------------------
+2. DATABASE MODEL & STRUCTURE (Neon PostgreSQL)
+--------------------------------------------------------------------------------
+The database is structured to securely isolate B2B actors and maintain financial
+auditing:
+* users: Stores hashed credentials and role classifications ('admin', 'seller', 'user').
+* products: Houses catalog listings. Each product is linked to a supplier via
+  `seller_id`. Prices and stock counts use `NUMERIC(20, 6)` for high precision.
+* orders: Records order transactions. Keeps track of the total invoice and approval status.
+* order_items: Audits order details. Stores the quantity, ordering unit, base price
+  at checkout, and the conversion factor applied.
+* medicine_requests: Pipeline for unavailable medicines, including customer phone,
+  requested drug details, and status.
+
+--------------------------------------------------------------------------------
+3. INVENTORY & UNIT CONVERSION WORKFLOW
+--------------------------------------------------------------------------------
+Medicines are listed in base units (like kg, g, mg, L, mL, or item). Buyers are
+allowed to buy in compatible units of the same dimension (e.g., ordering 'mg'
+when a product is stored in 'kg').
+
+Here is how a checkout transaction is processed:
+1. Selection: The Buyer adds a product (e.g. listed in 'kg' by a Seller) to their cart.
+2. Unit Selection: The Buyer selects 'mg' as the purchase unit and inputs a quantity.
+3. Live Math Conversion:
+   - The conversion factor is retrieved using Big.js: 
+     1 mg = 0.000001 kg (conversion factor = 10^-6).
+   - Converted Qty = Ordered Qty * Conversion Factor.
+   - Total Line Cost = Converted Qty * Base Price of the product.
+4. Concurrency & Stock Check:
+   - When placing the order, the system locks the product rows (`FOR UPDATE`) to
+     prevent race conditions.
+   - It verifies that the Seller has enough stock in the base unit.
+   - If stock is sufficient, the system deducts the converted amount and saves
+     the order with the checkout price, unit, and conversion factor locked in.
+
+--------------------------------------------------------------------------------
+4. PLATFORM COMMISSIONS & GMV TRACKING
+--------------------------------------------------------------------------------
+AasaMedChem charges a 5.0% platform fee on all B2B transactions:
+* Gross Merchandise Value (GMV): The total value of an order invoiced to the Buyer.
+* Platform Commission: 5% of the GMV, which goes to the Admin.
+* Seller Payout: 95% of the GMV, which goes to the Supplier.
+
+How the views adapt:
+* Admin View: The Admin sees gross transaction volume cards (GMV), booked commissions
+  (5% of all orders), cleared GMV (approved/completed orders), and cleared platform
+  revenue. Selecting an order shows the complete payout audit.
+* Seller View: The Seller sees orders placed on their products. Instead of the full
+  invoice total, the details show the gross transaction value, the 5% platform fee
+  deducted, and their Net Supplier Payout (95%).
+
+--------------------------------------------------------------------------------
+5. CUSTOM MEDICINE REQUEST PIPELINE
+--------------------------------------------------------------------------------
+If a User searches for a drug and it is not in the system catalog:
+1. The User clicks "Request Custom Medicine" from the search fallback card.
+2. They input their Display Name, Phone Number, Medicine Name, Required Qty/Unit,
+   and Delivery Address.
+3. This is saved to `medicine_requests` and appears on the Admin dashboard.
+4. The Admin contacts Sellers in the backend to source the drug.
+5. Catalog Integration: Once a supplier is found, the Admin clicks "Add to Catalog"
+   on the request card. This redirects to the products list and automatically opens
+   the product creation form pre-filled with the name, requested unit, and details.
+6. The Admin selects a Seller, configures the base price, and saves it. It is now
+   instantly searchable in the marketplace!
+
+--------------------------------------------------------------------------------
+6. TEST CREDENTIALS & QUICK ACCESS
+--------------------------------------------------------------------------------
+Start the development server (`npm run dev`) and log in at `http://localhost:3000/login`
+
+* USER (Buyer Account):
+  - Email: user@asamed.com
+  - Password: user123
+* SELLER (Supplier Account):
+  - Email: seller@asamed.com
+  - Password: seller123
+* ADMIN (Marketplace Coordinator):
+  - Email: admin@asamed.com
+  - Password: admin123
+
+Note: You can click the "User", "Seller", or "Admin" quick-access buttons on the login
+page to prefill these credentials instantly!
+================================================================================
