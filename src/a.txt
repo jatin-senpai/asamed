@@ -117,3 +117,20 @@ Start the development server (`npm run dev`) and log in at `http://localhost:300
 Note: You can click the "User", "Seller", or "Admin" quick-access buttons on the login
 page to prefill these credentials instantly!
 ================================================================================
+
+================================================================================
+7. GOOGLE FORM SHORT-ANSWER CHEAT SHEET
+================================================================================
+
+Q1: In which units do you store product quantities in the database?
+A1: Product quantities are stored strictly in the configured product's "base_unit" (e.g. mg, g, kg, mL, L, or item). Prices are stored as rate-per-base-unit.
+
+Q2: Which data type(s) did you use in the database for storing quantities and prices?
+A2: Exact PostgreSQL NUMERIC data types: NUMERIC(20, 6) for quantities, prices, and line items, and NUMERIC(20, 10) for exact conversion factors.
+
+Q3: Briefly describe the conversion factors you use between grams and kilograms, and between milliliters and liters.
+A3: We use base conversion ratios:
+- Weight: 1 kg = 1000 g (Factor: 1000.00); 1 g = 0.001 kg (Factor: 0.0010); 1 g = 1000 mg (Factor: 1000.00).
+- Volume: 1 L = 1000 mL (Factor: 1000.00); 1 mL = 0.001 L (Factor: 0.0010).
+Conversions across physical dimensions are blocked.
+================================================================================
