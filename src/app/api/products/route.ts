@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'SKU, name, base unit, and base price are required.' }, { status: 400 });
     }
 
-    const validUnits = ['g', 'kg', 'mL', 'L', 'item'];
+    const validUnits = ['mg', 'g', 'kg', 'mL', 'L', 'item'];
     if (!validUnits.includes(base_unit)) {
       return NextResponse.json({ error: `Invalid base unit. Must be one of: ${validUnits.join(', ')}` }, { status: 400 });
     }
