@@ -1,6 +1,7 @@
 -- Database Schema for AasaMedChem Inventory and Order Management System
 
 -- Drop tables if they exist (for easy re-initialization)
+DROP TABLE IF EXISTS medicine_requests CASCADE;
 DROP TABLE IF EXISTS order_items CASCADE;
 DROP TABLE IF EXISTS orders CASCADE;
 DROP TABLE IF EXISTS products CASCADE;
@@ -23,7 +24,7 @@ CREATE TABLE products (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     category VARCHAR(100),
-    base_unit VARCHAR(20) NOT NULL CHECK (base_unit IN ('g', 'kg', 'mL', 'L', 'item')),
+    base_unit VARCHAR(20) NOT NULL CHECK (base_unit IN ('mg', 'g', 'kg', 'mL', 'L', 'item')),
     -- Numeric fields with high decimal precision to support precise measurements/pricing
     base_price_inr NUMERIC(20, 6) NOT NULL CHECK (base_price_inr >= 0),
     stock_quantity NUMERIC(20, 6) NOT NULL DEFAULT 0.000000 CHECK (stock_quantity >= 0),
@@ -49,7 +50,7 @@ CREATE TABLE order_items (
     -- Quantity ordered by the seller (could be in different unit than product's base unit)
     quantity NUMERIC(20, 6) NOT NULL CHECK (quantity > 0),
     -- The unit used for ordering
-    unit VARCHAR(20) NOT NULL CHECK (unit IN ('g', 'kg', 'mL', 'L', 'item')),
+    unit VARCHAR(20) NOT NULL CHECK (unit IN ('mg', 'g', 'kg', 'mL', 'L', 'item')),
     -- Total calculated price (INR) for this item line
     calculated_price_inr NUMERIC(20, 6) NOT NULL CHECK (calculated_price_inr >= 0),
     -- Base price per base unit at the time of placing the order (for price lock audits)
@@ -60,11 +61,25 @@ CREATE TABLE order_items (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Create Medicine Requests table (for unavailable medicines)
+CREATE TABLE medicine_requests (
+    id SERIAL PRIMARY KEY,
+    customer_name VARCHAR(255) NOT NULL,
+    phone_number VARCHAR(50) NOT NULL,
+    medicine_name VARCHAR(255) NOT NULL,
+    quantity NUMERIC(20, 6) NOT NULL CHECK (quantity > 0),
+    unit VARCHAR(20) NOT NULL CHECK (unit IN ('mg', 'g', 'kg', 'mL', 'L', 'item')),
+    address TEXT NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'contacted', 'fulfilled')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create index for faster lookups
 CREATE INDEX idx_products_sku ON products(sku);
 CREATE INDEX idx_products_category ON products(category);
 CREATE INDEX idx_orders_user_id ON orders(user_id);
 CREATE INDEX idx_order_items_order_id ON order_items(order_id);
+CREATE INDEX idx_medicine_requests_name ON medicine_requests(medicine_name);
 
 -- Trigger function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
