@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Bell, Calendar, Phone, MapPin, Check, MessageSquare, AlertTriangle, Eye, ArrowRight, User } from 'lucide-react';
+import { Bell, Calendar, Phone, MapPin, Check, MessageSquare, AlertTriangle, Eye, ArrowRight, User, Plus } from 'lucide-react';
 import { formatPrecision, Unit, UNIT_LABELS } from '@/utils/conversions';
 
 interface MedicineRequest {
@@ -308,6 +308,20 @@ export default function AdminRequestsPage() {
                   </button>
                 )}
               </div>
+            </div>
+
+            {/* Catalog Integration */}
+            <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: '1.25rem', marginTop: '0.5rem' }}>
+              <span style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', fontWeight: 600 }}>
+                Catalog Integration:
+              </span>
+              <a 
+                href={`/dashboard/admin/products?prefill_name=${encodeURIComponent(selectedReq.medicine_name)}&prefill_unit=${selectedReq.unit}&prefill_desc=${encodeURIComponent(`Requested by ${selectedReq.customer_name} (${selectedReq.phone_number}).`)}`}
+                className="btn btn-secondary"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.5rem', fontSize: '0.8rem', textDecoration: 'none', width: '100%' }}
+              >
+                <Plus size={14} /> Add to Catalog Inventory
+              </a>
             </div>
 
             {/* Coordinator Instructions */}

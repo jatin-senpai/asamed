@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Plus, Edit2, Trash2, Search, X, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { formatINR, formatPrecision, Unit } from '@/utils/conversions';
 
@@ -15,7 +16,7 @@ interface Product {
   stock_quantity: string;
 }
 
-export default function AdminProductsPage() {
+function AdminProductsContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -40,6 +41,35 @@ export default function AdminProductsPage() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [modalError, setModalError] = useState<string | null>(null);
+
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Prefill hook for Medicine Request catalog integration
+  useEffect(() => {
+    const prefillName = searchParams.get('prefill_name');
+    const prefillUnit = searchParams.get('prefill_unit') as Unit | null;
+    const prefillDesc = searchParams.get('prefill_desc');
+    
+    if (prefillName) {
+      setModalMode('create');
+      setEditingProductId(null);
+      setName(prefillName);
+      setBaseUnit(prefillUnit || 'g');
+      setDescription(prefillDesc || '');
+      
+      const cleanName = prefillName.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 4);
+      const randNum = Math.floor(100 + Math.random() * 900);
+      setSku(`CHEM-${cleanName || 'MED'}-${randNum}`);
+      setProductCategory('Custom');
+      setBasePriceInr('');
+      setStockQuantity('0');
+      setIsModalOpen(true);
+      
+      // Clear URL params
+      router.replace('/dashboard/admin/products');
+    }
+  }, [searchParams, router]);
 
   const fetchProducts = async () => {
     try {
@@ -383,6 +413,7 @@ export default function AdminProductsPage() {
                     onChange={(e) => setBaseUnit(e.target.value as Unit)}
                     style={{ cursor: 'pointer' }}
                   >
+                    <option value="mg">mg</option>
                     <option value="g">g</option>
                     <option value="kg">kg</option>
                     <option value="mL">mL</option>
@@ -442,5 +473,17 @@ export default function AdminProductsPage() {
       )}
 
     </div>
+  );
+}
+
+export default function AdminProductsPage() {
+  return (
+    <Suspense fallback={
+      <div className="glass-panel flex-center" style={{ padding: '4rem' }}>
+        <p style={{ color: 'var(--text-secondary)' }}>Loading inventory...</p>
+      </div>
+    }>
+      <AdminProductsContent />
+    </Suspense>
   );
 }
