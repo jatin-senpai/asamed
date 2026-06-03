@@ -106,6 +106,15 @@ export async function GET(request: Request) {
         base_unit: 'item',
         base_price_inr: 150.000000,
         stock_quantity: 120.000000 // 120 items
+      },
+      {
+        sku: 'CHEM-FEN-006',
+        name: 'Fentanyl Citrate (Research Grade)',
+        description: 'High potency opioid receptor agonist for analytical research.',
+        category: 'Analgesics',
+        base_unit: 'mg',
+        base_price_inr: 0.080000, // 80 INR per gram, 80,000 INR per kg
+        stock_quantity: 250000.000000 // 250,000 mg (250 grams)
       }
     ];
 
