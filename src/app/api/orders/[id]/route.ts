@@ -40,6 +40,7 @@ export async function PUT(
     const order = orderCheck.rows[0];
     const oldStatus = order.status;
     const newStatus = status;
+    const isQuotation = order.order_type === 'quotation';
 
     if (oldStatus === newStatus) {
       await client.query('COMMIT');
@@ -58,23 +59,30 @@ export async function PUT(
 
     // 3. Stock restoration: Order is being REJECTED (restore stock)
     if (oldStatus !== 'rejected' && newStatus === 'rejected') {
-      for (const item of items) {
-        const qty = new Big(item.quantity);
-        const factor = new Big(item.conversion_factor_used);
-        const baseQty = qty.times(factor);
-        
-        const currentStock = new Big(item.stock_quantity);
-        const restoredStock = currentStock.plus(baseQty);
+      // Do NOT restore stock if it was a pending quotation (since stock was never deducted)
+      const shouldRestore = !(oldStatus === 'pending' && isQuotation);
+      if (shouldRestore) {
+        for (const item of items) {
+          const qty = new Big(item.quantity);
+          const factor = new Big(item.conversion_factor_used);
+          const baseQty = qty.times(factor);
+          
+          const currentStock = new Big(item.stock_quantity);
+          const restoredStock = currentStock.plus(baseQty);
 
-        await client.query(
-          'UPDATE products SET stock_quantity = $1 WHERE id = $2',
-          [restoredStock.toFixed(6), item.product_id]
-        );
+          await client.query(
+            'UPDATE products SET stock_quantity = $1 WHERE id = $2',
+            [restoredStock.toFixed(6), item.product_id]
+          );
+        }
       }
     }
 
-    // 4. Stock deduction: Order is being restored from REJECTED (deduct stock again)
-    if (oldStatus === 'rejected' && newStatus !== 'rejected') {
+    // 4. Stock deduction: Quotation approved OR Order restored from REJECTED
+    const isQuoteApproved = (oldStatus === 'pending' && (newStatus === 'approved' || newStatus === 'completed') && isQuotation);
+    const isRestoredFromRejected = (oldStatus === 'rejected' && newStatus !== 'rejected');
+
+    if (isQuoteApproved || isRestoredFromRejected) {
       for (const item of items) {
         const qty = new Big(item.quantity);
         const factor = new Big(item.conversion_factor_used);

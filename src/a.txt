@@ -39,26 +39,34 @@ auditing:
   requested drug details, and status.
 
 --------------------------------------------------------------------------------
-3. INVENTORY & UNIT CONVERSION WORKFLOW
+3. INVENTORY, UNIT CONVERSIONS & CHECKOUT CHANNELS
 --------------------------------------------------------------------------------
 Medicines are listed in base units (like kg, g, mg, L, mL, or item). Buyers are
-allowed to buy in compatible units of the same dimension (e.g., ordering 'mg'
+allowed to order in compatible units of the same dimension (e.g., ordering 'mg'
 when a product is stored in 'kg').
 
-Here is how a checkout transaction is processed:
-1. Selection: The Buyer adds a product (e.g. listed in 'kg' by a Seller) to their cart.
-2. Unit Selection: The Buyer selects 'mg' as the purchase unit and inputs a quantity.
-3. Live Math Conversion:
-   - The conversion factor is retrieved using Big.js: 
-     1 mg = 0.000001 kg (conversion factor = 10^-6).
-   - Converted Qty = Ordered Qty * Conversion Factor.
-   - Total Line Cost = Converted Qty * Base Price of the product.
-4. Concurrency & Stock Check:
-   - When placing the order, the system locks the product rows (`FOR UPDATE`) to
-     prevent race conditions.
-   - It verifies that the Seller has enough stock in the base unit.
-   - If stock is sufficient, the system deducts the converted amount and saves
-     the order with the checkout price, unit, and conversion factor locked in.
+There are two distinct checkout pathways:
+1. DIRECT BUY (Instant Purchase):
+   - Deducts stock immediately from the seller's inventory in the database.
+   - Blocks the transaction immediately if the requested quantity exceeds stock.
+   - Sets order status directly to 'completed'.
+2. REQUEST QUOTATION:
+   - Does NOT deduct stock immediately (allowing placement even if quantity exceeds current stock).
+   - Show a warning in the cart if quantity exceeds stock, but lets the user submit the quote.
+   - Sets order status to 'pending'. Stock is only deducted when the Admin approves it.
+
+Here is how a checkout transaction is processed in the code:
+1. Selection: The Buyer adds a product to their cart.
+2. Conversion: When quantity and unit are selected, Big.js computes:
+   - Converted Qty = Ordered Qty * Conversion Factor (e.g., 1 mg = 0.000001 kg)
+   - Line Price = Converted Qty * Base Price
+3. Database Transaction & Locking:
+   - The API opens a transaction and locks the product rows using `FOR UPDATE` to prevent double-selling.
+   - For Direct Buy: checks stock, rejects if insufficient, deducts stock, and writes orders.
+   - For Quotation: skips stock check, creates order as 'pending' with 0 stock deduction.
+4. Admin Status Changes:
+   - If the Admin approves a pending quote, the system checks stock and deducts it.
+   - If rejected, no stock deduction occurs. If a direct buy order is rejected, stock is restored.
 
 --------------------------------------------------------------------------------
 4. PLATFORM COMMISSIONS & GMV TRACKING

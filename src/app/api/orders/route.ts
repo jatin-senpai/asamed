@@ -16,6 +16,7 @@ export async function GET() {
       SELECT 
         o.id,
         o.status,
+        o.order_type,
         o.total_price_inr,
         o.created_at,
         o.updated_at,
@@ -83,20 +84,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden. Only users can place orders.' }, { status: 403 });
     }
 
-    const { items } = await request.json();
+    const { items, orderType } = await request.json();
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Order must contain at least one item.' }, { status: 400 });
     }
+
+    const type = orderType === 'direct_buy' ? 'direct_buy' : 'quotation';
+    const initialStatus = type === 'direct_buy' ? 'completed' : 'pending';
 
     // Begin database transaction
     await client.query('BEGIN');
 
     // 1. Create order header
     const orderHeaderResult = await client.query(
-      `INSERT INTO orders (user_id, status, total_price_inr) 
-       VALUES ($1, 'pending', 0.000000) 
+      `INSERT INTO orders (user_id, status, order_type, total_price_inr) 
+       VALUES ($1, $2, $3, 0.000000) 
        RETURNING id`,
-      [user.id]
+      [user.id, initialStatus, type]
     );
     const orderId = orderHeaderResult.rows[0].id;
 
@@ -141,22 +145,27 @@ export async function POST(request: Request) {
       const baseQty = orderQty.times(conversionFactor);
 
       // Verify stock availability
-      if (currentStock.lt(baseQty)) {
-        throw new Error(
-          `Insufficient stock for "${product.name}". Requested: ${orderQty} ${unit} (${baseQty} ${baseUnit}), Available: ${currentStock} ${baseUnit}.`
-        );
+      // Verify stock availability (only for direct buys since they pull stock instantly)
+      if (type === 'direct_buy') {
+        if (currentStock.lt(baseQty)) {
+          throw new Error(
+            `Insufficient stock for "${product.name}". Requested: ${orderQty} ${unit} (${baseQty} ${baseUnit}), Available: ${currentStock} ${baseUnit}.`
+          );
+        }
       }
 
       // Calculate line price
       const calculatedLinePrice = baseQty.times(basePrice);
       totalOrderPrice = totalOrderPrice.plus(calculatedLinePrice);
 
-      // Deduct stock
-      const newStock = currentStock.minus(baseQty);
-      await client.query(
-        'UPDATE products SET stock_quantity = $1 WHERE id = $2',
-        [newStock.toFixed(6), productId]
-      );
+      // Deduct stock if direct buy
+      if (type === 'direct_buy') {
+        const newStock = currentStock.minus(baseQty);
+        await client.query(
+          'UPDATE products SET stock_quantity = $1 WHERE id = $2',
+          [newStock.toFixed(6), productId]
+        );
+      }
 
       // Insert order item
       await client.query(

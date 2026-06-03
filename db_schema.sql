@@ -38,6 +38,7 @@ CREATE TABLE orders (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'completed')),
+    order_type VARCHAR(50) NOT NULL DEFAULT 'quotation' CHECK (order_type IN ('quotation', 'direct_buy')),
     total_price_inr NUMERIC(20, 6) NOT NULL CHECK (total_price_inr >= 0),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

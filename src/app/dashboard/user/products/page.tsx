@@ -180,6 +180,7 @@ export default function UserProductsPage() {
     let baseQty = new Big(0);
     let totalPrice = new Big(0);
     let hasError = false;
+    let isStockExceeded = false;
     let errorMsg = '';
 
     try {
@@ -194,37 +195,47 @@ export default function UserProductsPage() {
 
         const availableStock = new Big(item.product.stock_quantity);
         if (baseQty.gt(availableStock)) {
-          hasError = true;
+          isStockExceeded = true;
           errorMsg = `Exceeds stock limit (${formatPrecision(availableStock, 2)} ${item.product.base_unit})`;
         }
+      } else if (qtyStr !== '') {
+        hasError = true;
+        errorMsg = 'Quantity must be greater than zero';
       }
     } catch (e) {
       hasError = true;
       errorMsg = 'Invalid quantity';
     }
 
-    return { baseQty, totalPrice, hasError, errorMsg };
+    return { baseQty, totalPrice, hasError, isStockExceeded, errorMsg };
   };
 
   const getCartTotals = () => {
     let grandTotal = new Big(0);
     let totalItemsCount = 0;
     let hasErrors = false;
+    let hasStockErrors = false;
 
     cart.forEach(item => {
-      const { totalPrice, hasError } = getCartItemBreakdown(item);
+      const { totalPrice, hasError, isStockExceeded } = getCartItemBreakdown(item);
       grandTotal = grandTotal.plus(totalPrice);
-      totalItemsCount += item.quantity ? 1 : 0;
+      totalItemsCount += (item.quantity && parseFloat(item.quantity) > 0) ? 1 : 0;
       if (hasError) hasErrors = true;
+      if (isStockExceeded) hasStockErrors = true;
     });
 
-    return { grandTotal, totalItemsCount, hasErrors };
+    return { grandTotal, totalItemsCount, hasErrors, hasStockErrors };
   };
 
-  const handlePlaceOrder = async () => {
-    const { hasErrors } = getCartTotals();
+  const handlePlaceOrder = async (orderType: 'direct_buy' | 'quotation') => {
+    const { hasErrors, hasStockErrors } = getCartTotals();
     if (hasErrors) {
-      setOrderStatus({ success: false, message: 'Please resolve stock errors in the cart before placing order.' });
+      setOrderStatus({ success: false, message: 'Please resolve quantity errors in the cart before proceeding.' });
+      return;
+    }
+
+    if (orderType === 'direct_buy' && hasStockErrors) {
+      setOrderStatus({ success: false, message: 'Direct Buy is not allowed when quantity exceeds available stock.' });
       return;
     }
 
@@ -248,14 +259,16 @@ export default function UserProductsPage() {
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: orderItems })
+        body: JSON.stringify({ items: orderItems, orderType })
       });
       const data = await res.json();
       
       if (res.ok) {
         setOrderStatus({
           success: true,
-          message: `Quotation placed successfully! Order ID: #${data.orderId}. Total price: ${formatINR(data.totalPriceInr)}.`
+          message: orderType === 'direct_buy'
+            ? `Order purchased successfully! Order ID: #${data.orderId}. Total paid: ${formatINR(data.totalPriceInr)}.`
+            : `Quotation requested successfully! Order ID: #${data.orderId}. Total quote: ${formatINR(data.totalPriceInr)}.`
         });
         setCart([]); // Clear cart
         fetchProducts(); // Refresh stock quantities on catalog
@@ -275,7 +288,7 @@ export default function UserProductsPage() {
     }
   };
 
-  const { grandTotal, hasErrors } = getCartTotals();
+  const { grandTotal, hasErrors, hasStockErrors } = getCartTotals();
 
   return (
     <div className="grid-2col">
@@ -396,7 +409,7 @@ export default function UserProductsPage() {
                     className={`btn ${inCart ? 'btn-secondary' : 'btn-primary'}`}
                     style={{ width: '100%', padding: '0.6rem' }}
                   >
-                    {inCart ? 'Added to Quotation' : isOutOfStock ? 'Out of stock' : 'Add to Quotation'}
+                    {inCart ? 'Added to Cart' : isOutOfStock ? 'Out of stock' : 'Add to Cart'}
                   </button>
                 </div>
               );
@@ -409,7 +422,7 @@ export default function UserProductsPage() {
       <div className="glass-panel" style={{ padding: '2rem 1.5rem', height: 'fit-content', position: 'sticky', top: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '1rem' }}>
           <ShoppingCart style={{ color: 'var(--primary)' }} size={22} />
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Quotation Cart</h2>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Shopping Cart</h2>
           <span className="badge" style={{ background: 'var(--primary-glow)', color: 'var(--primary)', marginLeft: 'auto' }}>
             {cart.length}
           </span>
@@ -418,8 +431,8 @@ export default function UserProductsPage() {
         {cart.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
             <ShoppingCart size={40} style={{ opacity: 0.2, marginBottom: '1rem' }} />
-            <p style={{ fontSize: '0.9rem' }}>Your quotation cart is empty.</p>
-            <p style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>Add products from the catalog to build a quote.</p>
+            <p style={{ fontSize: '0.9rem' }}>Your shopping cart is empty.</p>
+            <p style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>Add products from the catalog to buy directly or request a quotation.</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -428,7 +441,7 @@ export default function UserProductsPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '420px', overflowY: 'auto', paddingRight: '0.25rem' }}>
               {cart.map(item => {
                 const compatibleUnits = getCompatibleUnits(item.product.base_unit);
-                const { baseQty, totalPrice, hasError, errorMsg } = getCartItemBreakdown(item);
+                const { baseQty, totalPrice, hasError, isStockExceeded, errorMsg } = getCartItemBreakdown(item);
                 
                 return (
                   <div key={item.product.id} className="glass-panel" style={{ padding: '1rem', background: 'rgba(7, 11, 19, 0.4)', borderColor: hasError ? 'rgba(239, 68, 68, 0.3)' : 'var(--card-border)' }}>
@@ -498,11 +511,22 @@ export default function UserProductsPage() {
                       </div>
                     )}
 
-                    {/* Error message */}
+                    {/* Error and Warning Messages */}
                     {hasError && (
                       <div style={{ color: 'var(--danger)', fontSize: '0.75rem', fontWeight: 500, marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                         <AlertTriangle size={12} />
                         {errorMsg}
+                      </div>
+                    )}
+                    {isStockExceeded && (
+                      <div style={{ color: 'var(--warning)', fontSize: '0.75rem', fontWeight: 500, marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <AlertTriangle size={12} />
+                          <span>{errorMsg}</span>
+                        </div>
+                        <span style={{ fontSize: '0.65rem', opacity: 0.8, marginLeft: '1rem' }}>
+                          Allowed for Quotation, but blocks Direct Buy.
+                        </span>
                       </div>
                     )}
                   </div>
@@ -521,15 +545,35 @@ export default function UserProductsPage() {
                 <strong style={{ color: 'var(--primary)', fontSize: '1.35rem' }}>{formatINR(grandTotal)}</strong>
               </div>
 
-              <button
-                onClick={handlePlaceOrder}
-                disabled={submittingOrder || hasErrors || cart.length === 0}
-                className="btn btn-primary"
-                style={{ width: '100%', gap: '0.5rem' }}
-              >
-                {submittingOrder ? 'Submitting...' : 'Place Quotation / Order'}
-                <ArrowRight size={16} />
-              </button>
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <button
+                  onClick={() => handlePlaceOrder('direct_buy')}
+                  disabled={submittingOrder || hasErrors || hasStockErrors || cart.length === 0}
+                  className="btn btn-primary"
+                  style={{ width: '100%', gap: '0.5rem', justifyContent: 'center' }}
+                >
+                  {submittingOrder ? 'Submitting...' : 'Direct Buy (Instant)'}
+                  <ArrowRight size={16} />
+                </button>
+                
+                <button
+                  onClick={() => handlePlaceOrder('quotation')}
+                  disabled={submittingOrder || hasErrors || cart.length === 0}
+                  className="btn btn-secondary"
+                  style={{ 
+                    width: '100%', 
+                    gap: '0.5rem', 
+                    justifyContent: 'center',
+                    borderColor: 'var(--primary)',
+                    color: 'var(--primary)',
+                    background: 'transparent'
+                  }}
+                >
+                  {submittingOrder ? 'Submitting...' : 'Request Quotation'}
+                  <ArrowRight size={16} />
+                </button>
+              </div>
             </div>
           </div>
         )}

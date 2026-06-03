@@ -22,6 +22,7 @@ interface OrderItem {
 interface Order {
   id: number;
   status: 'pending' | 'approved' | 'rejected' | 'completed';
+  order_type: 'quotation' | 'direct_buy';
   total_price_inr: string;
   created_at: string;
   updated_at: string;
@@ -247,12 +248,21 @@ export default function AdminOrdersPage() {
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                         Order #{order.id}
                       </span>
                       <span className={`badge ${getStatusBadgeClass(order.status)}`} style={{ textTransform: 'capitalize' }}>
                         {order.status}
+                      </span>
+                      <span className="badge" style={{ 
+                        background: order.order_type === 'direct_buy' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(139, 92, 246, 0.1)', 
+                        color: order.order_type === 'direct_buy' ? 'var(--accent)' : '#a78bfa',
+                        border: order.order_type === 'direct_buy' ? '1px solid rgba(59, 130, 246, 0.2)' : '1px solid rgba(139, 92, 246, 0.2)',
+                        textTransform: 'capitalize',
+                        fontSize: '0.7rem'
+                      }}>
+                        {order.order_type === 'direct_buy' ? 'Direct Buy' : 'Quotation'}
                       </span>
                     </div>
                     <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--primary)' }}>
@@ -301,8 +311,21 @@ export default function AdminOrdersPage() {
             {/* Header info */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Quotation:</span>
-                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Order #{selectedOrder.id}</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Order Number:</span>
+                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>#{selectedOrder.id}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Order Type:</span>
+                <span className="badge" style={{ 
+                  background: selectedOrder.order_type === 'direct_buy' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(139, 92, 246, 0.1)', 
+                  color: selectedOrder.order_type === 'direct_buy' ? 'var(--accent)' : '#a78bfa',
+                  border: selectedOrder.order_type === 'direct_buy' ? '1px solid rgba(59, 130, 246, 0.2)' : '1px solid rgba(139, 92, 246, 0.2)',
+                  textTransform: 'capitalize',
+                  fontSize: '0.75rem',
+                  fontWeight: 600
+                }}>
+                  {selectedOrder.order_type === 'direct_buy' ? 'Direct Buy' : 'Quotation'}
+                </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Seller Name:</span>

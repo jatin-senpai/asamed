@@ -30,7 +30,17 @@ Welcome to the **AasaMedChem** Inventory and Order Management System. This appli
 
 ## 📊 Database Schema & Precision Strategy
 
-All numeric fields (prices, stock quantities, ordered quantities, conversion factors) are stored as PostgreSQL `NUMERIC` types to support high decimal precision (up to 6 decimals for storage, and 10 decimals for conversion ratios) and avoid rounding anomalies.
+All numeric fields (prices, stock quantities, ordered quantities, and conversion factors) are stored as PostgreSQL `NUMERIC` types to support high decimal precision (up to 6 decimals for storage, and 10 decimals for conversion ratios) and avoid rounding anomalies.
+
+### 💡 PostgreSQL Data Type Rationale
+1. **Why `NUMERIC` over `DOUBLE PRECISION` or `FLOAT`?**
+   - **Currency and Financial Math**: Binary floating-point types (`FLOAT`, `REAL`, `DOUBLE PRECISION`) represent numbers using binary fractions. This introduces precision loss in simple decimal values (e.g. `0.1 + 0.2` becomes `0.30000000000000004`). In a B2B chemical marketplace, rounding errors accumulate into significant financial discrepancies. `NUMERIC` (or `DECIMAL`) is an exact numeric type that does not suffer from floating-point inaccuracy.
+   - **Audit and Regulatory Compliance**: Keeping an exact mathematical conversion history is vital for chemical procurement audits.
+2. **Why `NUMERIC(20, 6)` for Prices & Quantities?**
+   - **Scale (6 Decimals)**: Allows measuring microscopic chemical compounds or highly accurate concentrations (e.g. measuring `0.000001 kg` of a substance).
+   - **Precision (20 Digits total)**: Supports large wholesale orders up to $10^{14}$ units without truncation.
+3. **Why `NUMERIC(20, 10)` for `conversion_factor_used`?**
+   - **Conversion Ratios**: Converting between weight units requires high-precision scale. For example, `1 mg = 0.000001 kg`. Storing conversion ratios up to 10 decimal places (`NUMERIC(20, 10)`) guarantees that rounding errors never occur during bulk unit conversions.
 
 ### Key Tables
 
