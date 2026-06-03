@@ -4,7 +4,7 @@ import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Beaker, ShieldAlert, LogOut } from 'lucide-react';
+import { Beaker, ShieldAlert, LogOut, Bell } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, logout, loading } = useAuth();
@@ -51,6 +51,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               >
                 <ShieldAlert size={18} />
                 Manage Orders
+              </Link>
+            </li>
+            <li>
+              <Link 
+                href="/dashboard/admin/requests" 
+                className={`sidebar-link ${pathname.startsWith('/dashboard/admin/requests') ? 'active' : ''}`}
+              >
+                <Bell size={18} />
+                Medicine Requests
               </Link>
             </li>
           </ul>
