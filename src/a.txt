@@ -133,4 +133,20 @@ A3: We use base conversion ratios:
 - Weight: 1 kg = 1000 g (Factor: 1000.00); 1 g = 0.001 kg (Factor: 0.0010); 1 g = 1000 mg (Factor: 1000.00).
 - Volume: 1 L = 1000 mL (Factor: 1000.00); 1 mL = 0.001 L (Factor: 0.0010).
 Conversions across physical dimensions are blocked.
+
+Q4: How do you ensure that quantities are stored consistently while still displaying them in different units in the UI?
+A4: We enforce a strict "Base Unit Storage" rule. The database stores all stock quantities and prices exclusively in terms of the product's configured base_unit. When displaying a product in the UI, we retrieve this base quantity and price, and if the user selects a compatible ordering unit, we compute the converted display values dynamically using exact math (Big.js). To maintain auditability, when an order is placed, the API records both the user's selected unit/quantity and the exact conversion_factor_used, enabling the UI to reconstruct the exact calculations of the order at checkout.
+
+Q5: Mention one or two edge cases you considered for unit conversion or pricing (for example, rounding, very small or very large values).
+A5: We considered two primary edge cases:
+1. Micro-precision scaling: Chemical products can require transactions in micrograms (mg on a kg base). Floating-point calculation is unsafe here. We use Big.js and PostgreSQL NUMERIC data types to preserve exact precision down to 6 decimals for storage and 10 decimals for conversion factors.
+2. Concurrent stock race conditions: When multiple buyers checkout simultaneously, a race condition can cause double-selling. We lock rows at checkout using SELECT FOR UPDATE to serialize stock evaluations and deductions.
+
+Q6: If you wanted to add support for a new unit or dimension (for example, pounds or gallons), how would you extend your current design?
+A6: To extend the design, we would:
+1. Add the new units (e.g. lbs, gal) to the database CHECK constraints on the products, order_items, and medicine_requests tables.
+2. Update conversions.ts:
+   - If adding a unit to an existing dimension (e.g., lbs to Weight), add its conversion factor relative to the base (e.g., 1 kg = 2.20462 lbs).
+   - If adding a new dimension (e.g., Imperial Volume with gal), define a new dimension mapping and list compatible units and their factors relative to a base (e.g., gal and qt with base gal).
+3. The rest of the checkout, rounding, and audit code is dimension-agnostic and will automatically support it.
 ================================================================================
