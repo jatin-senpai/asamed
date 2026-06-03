@@ -42,6 +42,18 @@ export default function SellerProductsPage() {
   const [orderStatus, setOrderStatus] = useState<{ success: boolean; message: string } | null>(null);
   const [submittingOrder, setSubmittingOrder] = useState(false);
 
+  // Medicine request state
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [reqCustomerName, setReqCustomerName] = useState('');
+  const [reqPhoneNumber, setReqPhoneNumber] = useState('');
+  const [reqMedicineName, setReqMedicineName] = useState('');
+  const [reqQuantity, setReqQuantity] = useState('');
+  const [reqUnit, setReqUnit] = useState<Unit>('g');
+  const [reqAddress, setReqAddress] = useState('');
+  const [reqSubmitError, setReqSubmitError] = useState<string | null>(null);
+  const [reqSubmitSuccess, setReqSubmitSuccess] = useState<string | null>(null);
+  const [submittingRequest, setSubmittingRequest] = useState(false);
+
   // Fetch products
   const fetchProducts = async () => {
     try {
@@ -70,6 +82,60 @@ export default function SellerProductsPage() {
   useEffect(() => {
     fetchProducts();
   }, [search, category]);
+
+  const handleOpenRequestModal = (medName = '') => {
+    setReqMedicineName(medName || search || '');
+    setReqCustomerName('');
+    setReqPhoneNumber('');
+    setReqQuantity('1');
+    setReqUnit('g');
+    setReqAddress('');
+    setReqSubmitError(null);
+    setReqSubmitSuccess(null);
+    setIsRequestModalOpen(true);
+  };
+
+  const handleRequestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setReqSubmitError(null);
+    setReqSubmitSuccess(null);
+
+    if (!reqCustomerName || !reqPhoneNumber || !reqMedicineName || !reqQuantity || !reqUnit || !reqAddress) {
+      setReqSubmitError('All fields are required.');
+      return;
+    }
+
+    setSubmittingRequest(true);
+    try {
+      const res = await fetch('/api/medicine-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: reqCustomerName,
+          phoneNumber: reqPhoneNumber,
+          medicineName: reqMedicineName,
+          quantity: reqQuantity,
+          unit: reqUnit,
+          address: reqAddress
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setReqSubmitSuccess(`Request for "${reqMedicineName}" submitted successfully to the admin!`);
+        setReqCustomerName('');
+        setReqPhoneNumber('');
+        setReqAddress('');
+        setReqMedicineName('');
+        setReqQuantity('');
+      } else {
+        setReqSubmitError(data.error || 'Failed to submit request.');
+      }
+    } catch (err) {
+      setReqSubmitError('Network error occurred.');
+    } finally {
+      setSubmittingRequest(false);
+    }
+  };
 
   const handleAddToCart = (product: Product) => {
     // Check if product already in cart
@@ -225,8 +291,8 @@ export default function SellerProductsPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         
         {/* Search & Filters */}
-        <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <div style={{ flex: 1, position: 'relative' }}>
+        <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
             <Search size={18} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input
               type="text"
@@ -238,7 +304,7 @@ export default function SellerProductsPage() {
             />
           </div>
           
-          <div style={{ width: '200px' }}>
+          <div style={{ width: '180px' }}>
             <select
               className="input-field"
               value={category}
@@ -251,6 +317,15 @@ export default function SellerProductsPage() {
               ))}
             </select>
           </div>
+
+          <button 
+            type="button"
+            onClick={() => handleOpenRequestModal()} 
+            className="btn btn-secondary"
+            style={{ whiteSpace: 'nowrap' }}
+          >
+            Request Custom Medicine
+          </button>
         </div>
 
         {/* Order placing notification */}
@@ -267,9 +342,19 @@ export default function SellerProductsPage() {
             <p style={{ color: 'var(--text-secondary)' }}>Loading catalog...</p>
           </div>
         ) : products.length === 0 ? (
-          <div className="glass-panel flex-center" style={{ padding: '4rem', flexDirection: 'column', gap: '0.5rem' }}>
+          <div className="glass-panel flex-center" style={{ padding: '4rem', flexDirection: 'column', gap: '1rem', textAlign: 'center' }}>
             <HelpCircle size={32} style={{ color: 'var(--text-muted)' }} />
-            <p style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>No products matched your search.</p>
+            <div>
+              <p style={{ color: 'var(--text-secondary)', fontWeight: 600, fontSize: '1.1rem' }}>No medicines matched your search.</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>If a medicine is unavailable, you can submit a request directly to the Admin.</p>
+            </div>
+            <button 
+              onClick={() => handleOpenRequestModal(search)}
+              className="btn btn-primary"
+              style={{ marginTop: '0.5rem' }}
+            >
+              Request "{search || 'Medicine'}"
+            </button>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
@@ -451,10 +536,150 @@ export default function SellerProductsPage() {
                 <ArrowRight size={16} />
               </button>
             </div>
-
           </div>
         )}
       </div>
+
+      {/* Modal - Request Unavailable Medicine */}
+      {isRequestModalOpen && (
+        <div className="modal-overlay">
+          <div className="glass-panel modal-content" style={{ maxWidth: '520px' }}>
+            
+            <div className="modal-header">
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>
+                Request Unavailable Medicine
+              </h2>
+              <button 
+                type="button"
+                onClick={() => setIsRequestModalOpen(false)} 
+                className="modal-close"
+                style={{ fontSize: '1.25rem' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            {reqSubmitSuccess && (
+              <div className="alert-banner alert-banner-success" style={{ padding: '0.75rem', marginBottom: '1rem' }}>
+                <CheckCircle2 size={16} />
+                <span style={{ fontSize: '0.8rem' }}>{reqSubmitSuccess}</span>
+              </div>
+            )}
+
+            {reqSubmitError && (
+              <div className="alert-banner alert-banner-danger" style={{ padding: '0.75rem', marginBottom: '1rem' }}>
+                <AlertTriangle size={16} />
+                <span style={{ fontSize: '0.8rem' }}>{reqSubmitError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleRequestSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Your Display Name*</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="e.g. John Doe"
+                    value={reqCustomerName}
+                    onChange={(e) => setReqCustomerName(e.target.value)}
+                    required
+                  />
+                </div>
+                
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Phone Number*</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="e.g. +91 9988776655"
+                    value={reqPhoneNumber}
+                    onChange={(e) => setReqPhoneNumber(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Requested Medicine Name*</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="e.g. Paracetamol 650mg"
+                  value={reqMedicineName}
+                  onChange={(e) => setReqMedicineName(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: '1rem' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Required Quantity*</label>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    className="input-field"
+                    placeholder="e.g. 50"
+                    value={reqQuantity}
+                    onChange={(e) => setReqQuantity(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Quantity Unit*</label>
+                  <select
+                    className="input-field"
+                    value={reqUnit}
+                    onChange={(e) => setReqUnit(e.target.value as Unit)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <option value="mg">mg</option>
+                    <option value="g">g</option>
+                    <option value="kg">kg</option>
+                    <option value="mL">mL</option>
+                    <option value="L">L</option>
+                    <option value="item">item</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                <label className="form-label">Delivery Address*</label>
+                <textarea
+                  className="input-field"
+                  placeholder="Street, City, Pincode..."
+                  rows={3}
+                  value={reqAddress}
+                  onChange={(e) => setReqAddress(e.target.value)}
+                  required
+                  style={{ resize: 'none', fontFamily: 'var(--font-sans)' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setIsRequestModalOpen(false)} 
+                  className="btn btn-secondary" 
+                  style={{ flex: 1 }}
+                >
+                  Close
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={submittingRequest}
+                  className="btn btn-primary" 
+                  style={{ flex: 1 }}
+                >
+                  {submittingRequest ? 'Submitting...' : 'Submit Request'}
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }
