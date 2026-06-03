@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 export interface User {
   id: number;
   email: string;
-  role: 'admin' | 'seller';
+  role: 'admin' | 'seller' | 'user';
   name: string;
 }
 
@@ -61,8 +61,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Redirect based on role
         if (data.user.role === 'admin') {
           router.push('/dashboard/admin/products');
-        } else {
+        } else if (data.user.role === 'seller') {
           router.push('/dashboard/seller/products');
+        } else {
+          router.push('/dashboard/user/products');
         }
         return { success: true };
       } else {

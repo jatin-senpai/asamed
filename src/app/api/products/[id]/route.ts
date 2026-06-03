@@ -9,8 +9,8 @@ export async function PUT(
 ) {
   try {
     const user = await getSessionUser();
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden. Admin access required.' }, { status: 403 });
+    if (!user || (user.role !== 'admin' && user.role !== 'seller')) {
+      return NextResponse.json({ error: 'Forbidden. Admin or Seller access required.' }, { status: 403 });
     }
 
     const { id } = await params;
@@ -21,6 +21,11 @@ export async function PUT(
     const checkProduct = await query('SELECT * FROM products WHERE id = $1', [id]);
     if (checkProduct.rows.length === 0) {
       return NextResponse.json({ error: 'Product not found.' }, { status: 404 });
+    }
+
+    const product = checkProduct.rows[0];
+    if (user.role === 'seller' && product.seller_id !== user.id) {
+      return NextResponse.json({ error: 'Forbidden. You do not own this product.' }, { status: 403 });
     }
 
     // Validation
@@ -67,8 +72,8 @@ export async function DELETE(
 ) {
   try {
     const user = await getSessionUser();
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden. Admin access required.' }, { status: 403 });
+    if (!user || (user.role !== 'admin' && user.role !== 'seller')) {
+      return NextResponse.json({ error: 'Forbidden. Admin or Seller access required.' }, { status: 403 });
     }
 
     const { id } = await params;
@@ -77,6 +82,11 @@ export async function DELETE(
     const checkProduct = await query('SELECT * FROM products WHERE id = $1', [id]);
     if (checkProduct.rows.length === 0) {
       return NextResponse.json({ error: 'Product not found.' }, { status: 404 });
+    }
+
+    const product = checkProduct.rows[0];
+    if (user.role === 'seller' && product.seller_id !== user.id) {
+      return NextResponse.json({ error: 'Forbidden. You do not own this product.' }, { status: 403 });
     }
 
     await query('DELETE FROM products WHERE id = $1', [id]);

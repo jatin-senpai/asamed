@@ -40,6 +40,28 @@ export default function AdminOrdersPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
 
+  const getCommissionMetrics = () => {
+    let grossVolume = new Big(0);
+    let commissionEarned = new Big(0);
+    let completedVolume = new Big(0);
+    let completedCommission = new Big(0);
+
+    orders.forEach(order => {
+      const amt = new Big(order.total_price_inr || 0);
+      grossVolume = grossVolume.plus(amt);
+      
+      const comm = amt.times(0.05);
+      commissionEarned = commissionEarned.plus(comm);
+
+      if (order.status === 'completed' || order.status === 'approved') {
+        completedVolume = completedVolume.plus(amt);
+        completedCommission = completedCommission.plus(comm);
+      }
+    });
+
+    return { grossVolume, commissionEarned, completedVolume, completedCommission };
+  };
+
   const fetchOrders = async () => {
     try {
       const res = await fetch('/api/orders');
@@ -152,6 +174,48 @@ export default function AdminOrdersPage() {
           <div className="alert-banner alert-banner-danger">
             <X size={18} />
             <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{errorMsg}</span>
+          </div>
+        )}
+
+        {/* Earnings & Transaction Summary KPI Cards */}
+        {!loading && orders.length > 0 && (
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+            gap: '1rem',
+            marginBottom: '1rem'
+          }}>
+            <div className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', background: 'rgba(255,255,255,0.02)' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Gross Volume (GMV)</span>
+              <strong style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>
+                {formatINR(getCommissionMetrics().grossVolume)}
+              </strong>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Total all quotations placed</span>
+            </div>
+            
+            <div className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', background: 'rgba(255,255,255,0.02)' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Commission Booked (5%)</span>
+              <strong style={{ fontSize: '1.25rem', color: 'var(--primary)' }}>
+                {formatINR(getCommissionMetrics().commissionEarned)}
+              </strong>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>From total bookings</span>
+            </div>
+
+            <div className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', background: 'rgba(255,255,255,0.02)' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Fulfill Volume (Cleared)</span>
+              <strong style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>
+                {formatINR(getCommissionMetrics().completedVolume)}
+              </strong>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Approved/Completed orders</span>
+            </div>
+
+            <div className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', background: 'rgba(255,255,255,0.02)' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Net Revenue (5%)</span>
+              <strong style={{ fontSize: '1.25rem', color: 'var(--primary)' }}>
+                {formatINR(getCommissionMetrics().completedCommission)}
+              </strong>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Net platform earnings</span>
+            </div>
           </div>
         )}
 
@@ -408,10 +472,25 @@ export default function AdminOrdersPage() {
               </div>
             </div>
 
-            {/* Total */}
-            <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Quotation Net Total:</span>
-              <strong style={{ fontSize: '1.25rem', color: 'var(--primary)' }}>{formatINR(selectedOrder.total_price_inr)}</strong>
+            {/* Commission and Payout breakdown */}
+            <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                <span>Transaction Value (GMV):</span>
+                <span>{formatINR(selectedOrder.total_price_inr)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 500 }}>
+                <span>Platform Commission (5%):</span>
+                <span>+ {formatINR(new Big(selectedOrder.total_price_inr).times(0.05))}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                <span>Seller Payout Share (95%):</span>
+                <span>{formatINR(new Big(selectedOrder.total_price_inr).times(0.95))}</span>
+              </div>
+              
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.75rem', marginTop: '0.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Total Customer Invoice:</span>
+                <strong style={{ fontSize: '1.25rem', color: 'var(--primary)' }}>{formatINR(selectedOrder.total_price_inr)}</strong>
+              </div>
             </div>
 
           </div>

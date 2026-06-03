@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Beaker, ClipboardList, LogOut } from 'lucide-react';
 
-export default function SellerLayout({ children }: { children: React.ReactNode }) {
+export default function UserLayout({ children }: { children: React.ReactNode }) {
   const { user, logout, loading } = useAuth();
   const pathname = usePathname();
 
@@ -21,7 +21,7 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
   }
 
   // Safety check
-  if (!user || user.role !== 'seller') {
+  if (!user || user.role !== 'user') {
     return null;
   }
 
@@ -37,20 +37,20 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
           <ul className="sidebar-menu">
             <li>
               <Link 
-                href="/dashboard/seller/products" 
-                className={`sidebar-link ${pathname.startsWith('/dashboard/seller/products') ? 'active' : ''}`}
+                href="/dashboard/user/products" 
+                className={`sidebar-link ${pathname.startsWith('/dashboard/user/products') ? 'active' : ''}`}
               >
                 <Beaker size={18} />
-                Manage Inventory
+                Browse Catalog
               </Link>
             </li>
             <li>
               <Link 
-                href="/dashboard/seller/orders" 
-                className={`sidebar-link ${pathname.startsWith('/dashboard/seller/orders') ? 'active' : ''}`}
+                href="/dashboard/user/orders" 
+                className={`sidebar-link ${pathname.startsWith('/dashboard/user/orders') ? 'active' : ''}`}
               >
                 <ClipboardList size={18} />
-                Received Orders
+                My Orders
               </Link>
             </li>
           </ul>
@@ -67,16 +67,16 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
       <main className="dashboard-main animate-fade-in">
         <header className="header-bar">
           <div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.25rem' }}>Seller Portal</h1>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Manage your product listings, configure base units, and track incoming orders.</p>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.25rem' }}>Buyer Portal</h1>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Browse products, request custom quantities, and place orders.</p>
           </div>
           <div className="header-user-badge">
-            <div className="header-user-icon" style={{ background: 'var(--warning)', color: 'var(--bg-dark)' }}>
+            <div className="header-user-icon" style={{ background: 'var(--primary)', color: 'white' }}>
               {user.name.charAt(0).toUpperCase()}
             </div>
             <div>
               <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)' }}>{user.name}</div>
-              <div style={{ color: 'var(--warning)', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase' }}>{user.role}</div>
+              <div style={{ color: 'var(--primary)', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase' }}>{user.role}</div>
             </div>
           </div>
         </header>

@@ -12,7 +12,7 @@ CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(50) NOT NULL CHECK (role IN ('admin', 'seller')),
+    role VARCHAR(50) NOT NULL CHECK (role IN ('admin', 'seller', 'user')),
     name VARCHAR(255) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -28,6 +28,7 @@ CREATE TABLE products (
     -- Numeric fields with high decimal precision to support precise measurements/pricing
     base_price_inr NUMERIC(20, 6) NOT NULL CHECK (base_price_inr >= 0),
     stock_quantity NUMERIC(20, 6) NOT NULL DEFAULT 0.000000 CHECK (stock_quantity >= 0),
+    seller_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -77,6 +78,7 @@ CREATE TABLE medicine_requests (
 -- Create index for faster lookups
 CREATE INDEX idx_products_sku ON products(sku);
 CREATE INDEX idx_products_category ON products(category);
+CREATE INDEX idx_products_seller_id ON products(seller_id);
 CREATE INDEX idx_orders_user_id ON orders(user_id);
 CREATE INDEX idx_order_items_order_id ON order_items(order_id);
 CREATE INDEX idx_medicine_requests_name ON medicine_requests(medicine_name);

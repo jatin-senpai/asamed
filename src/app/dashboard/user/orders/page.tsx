@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ClipboardList, Calendar, Info, Eye, User } from 'lucide-react';
+import { ClipboardList, Calendar, Info, Eye } from 'lucide-react';
 import { formatINR, formatPrecision, Unit } from '@/utils/conversions';
 import Big from 'big.js';
 
@@ -30,7 +30,7 @@ interface Order {
   items: OrderItem[];
 }
 
-export default function SellerOrdersPage() {
+export default function UserOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -89,7 +89,7 @@ export default function SellerOrdersPage() {
         <div className="glass-panel" style={{ padding: '1.25rem 1.5rem' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <ClipboardList size={20} style={{ color: 'var(--primary)' }} />
-            Received B2B Orders
+            Your Quotations & Orders
           </h2>
         </div>
 
@@ -100,7 +100,7 @@ export default function SellerOrdersPage() {
         ) : orders.length === 0 ? (
           <div className="glass-panel flex-center" style={{ padding: '4rem', flexDirection: 'column', gap: '0.5rem' }}>
             <ClipboardList size={32} style={{ color: 'var(--text-muted)' }} />
-            <p style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>No orders have been received for your products yet.</p>
+            <p style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>You haven't placed any orders yet.</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -129,18 +129,18 @@ export default function SellerOrdersPage() {
                       </span>
                     </div>
                     <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)' }}>
-                      Total: {formatINR(order.total_price_inr)}
+                      {formatINR(order.total_price_inr)}
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <User size={14} />
-                      <span>From: {order.user_name}</span>
+                      <Calendar size={14} />
+                      {formatDate(order.created_at)}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)' }}>
                       <Eye size={14} />
-                      <span>Details</span>
+                      <span>Click to view audit details</span>
                     </div>
                   </div>
                 </div>
@@ -154,7 +154,7 @@ export default function SellerOrdersPage() {
       <div className="glass-panel" style={{ padding: '2rem 1.5rem', height: 'fit-content', position: 'sticky', top: '2rem' }}>
         <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.5rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Info size={20} style={{ color: 'var(--primary)' }} />
-          Order Calculations Audit
+          Conversion Audit Log
         </h2>
 
         {!selectedOrder ? (
@@ -171,24 +171,20 @@ export default function SellerOrdersPage() {
                 <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>#{selectedOrder.id}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Customer Name:</span>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{selectedOrder.user_name} ({selectedOrder.user_email})</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Received Date:</span>
-                <span style={{ fontSize: '0.85rem' }}>{formatDate(selectedOrder.created_at)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Order Status:</span>
                 <span className={`badge ${getStatusBadgeClass(selectedOrder.status)}`} style={{ textTransform: 'capitalize' }}>
                   {selectedOrder.status}
                 </span>
               </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Placed On:</span>
+                <span style={{ fontSize: '0.85rem' }}>{formatDate(selectedOrder.created_at)}</span>
+              </div>
             </div>
 
             {/* Items List */}
             <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: '1.25rem' }}>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>Purchased Items & Unit Conversions</h3>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>Ordered Items & Calculation Audit</h3>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {selectedOrder.items && selectedOrder.items.map((item, idx) => {
@@ -232,14 +228,14 @@ export default function SellerOrdersPage() {
                               <span style={{ fontFamily: 'monospace' }}>× {formatPrecision(conversionFactor, 4)}</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                              <span>Base Qty (Stock Deducted):</span>
+                              <span>Base Qty (Internal):</span>
                               <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{formatPrecision(baseQty, 4)} {item.product_base_unit}</span>
                             </div>
                           </>
                         )}
                         
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                          <span>Price at Order (INR):</span>
+                          <span>Base Price (INR):</span>
                           <span>{formatINR(basePrice)} / {item.product_base_unit}</span>
                         </div>
 
@@ -256,24 +252,10 @@ export default function SellerOrdersPage() {
               </div>
             </div>
 
-            {/* Commission and Net Payout Breakdown */}
-            <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: '1.25rem', paddingBottom: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                <span>Transaction Value (GMV):</span>
-                <span>{formatINR(selectedOrder.total_price_inr)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--danger)' }}>
-                <span>Platform Commission (5%):</span>
-                <span>- {formatINR(new Big(selectedOrder.total_price_inr).times(0.05))}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.75rem', marginTop: '0.25rem', alignItems: 'center' }}>
-                <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Your Net Payout (95%):</span>
-                <strong style={{ fontSize: '1.25rem', color: 'var(--primary)' }}>{formatINR(new Big(selectedOrder.total_price_inr).times(0.95))}</strong>
-              </div>
-            </div>
-
-            <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: '1.25rem', fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-              <strong>B2B Fulfillment Note:</strong> The Admin oversees approvals and status modifications. Package the items matching the conversions audit above in the exact base stock quantities.
+            {/* Total */}
+            <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Grand Total Paid:</span>
+              <strong style={{ fontSize: '1.25rem', color: 'var(--primary)' }}>{formatINR(selectedOrder.total_price_inr)}</strong>
             </div>
 
           </div>

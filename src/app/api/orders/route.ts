@@ -43,8 +43,11 @@ export async function GET() {
     `;
 
     const params: any[] = [];
-    if (user.role !== 'admin') {
+    if (user.role === 'user') {
       sql += ' WHERE o.user_id = $1';
+      params.push(user.id);
+    } else if (user.role === 'seller') {
+      sql += ' WHERE p.seller_id = $1';
       params.push(user.id);
     }
 
@@ -76,8 +79,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized. Please login.' }, { status: 401 });
     }
 
-    if (user.role !== 'seller') {
-      return NextResponse.json({ error: 'Forbidden. Only sellers can place orders.' }, { status: 403 });
+    if (user.role !== 'user') {
+      return NextResponse.json({ error: 'Forbidden. Only users can place orders.' }, { status: 403 });
     }
 
     const { items } = await request.json();

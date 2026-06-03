@@ -42,22 +42,32 @@ export async function GET(request: Request) {
     console.log("Seeding users...");
     const adminPasswordHash = await bcrypt.hash('admin123', 10);
     const sellerPasswordHash = await bcrypt.hash('seller123', 10);
+    const userPasswordHash = await bcrypt.hash('user123', 10);
 
-    const adminUser = await query(
+    await query(
       `INSERT INTO users (email, password_hash, role, name) 
        VALUES ($1, $2, $3, $4) 
-       ON CONFLICT (email) DO NOTHING 
-       RETURNING id, email, role`,
-      ['admin@asamed.com', adminPasswordHash, 'admin', 'Admin User']
+       ON CONFLICT (email) DO NOTHING`,
+      ['admin@asamed.com', adminPasswordHash, 'admin', 'Admin Coordinator']
     );
 
-    const sellerUser = await query(
+    await query(
       `INSERT INTO users (email, password_hash, role, name) 
        VALUES ($1, $2, $3, $4) 
-       ON CONFLICT (email) DO NOTHING 
-       RETURNING id, email, role`,
-      ['seller@asamed.com', sellerPasswordHash, 'seller', 'Seller User']
+       ON CONFLICT (email) DO NOTHING`,
+      ['seller@asamed.com', sellerPasswordHash, 'seller', 'Seller Supplier']
     );
+
+    await query(
+      `INSERT INTO users (email, password_hash, role, name) 
+       VALUES ($1, $2, $3, $4) 
+       ON CONFLICT (email) DO NOTHING`,
+      ['user@asamed.com', userPasswordHash, 'user', 'User Customer']
+    );
+
+    // Retrieve seller ID for products mapping
+    const sellerFetch = await query("SELECT id FROM users WHERE email = 'seller@asamed.com'");
+    const sellerId = sellerFetch.rows[0].id;
 
     // 4. Seed Products
     console.log("Seeding products...");
@@ -120,10 +130,10 @@ export async function GET(request: Request) {
 
     for (const prod of productsSeed) {
       await query(
-        `INSERT INTO products (sku, name, description, category, base_unit, base_price_inr, stock_quantity)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `INSERT INTO products (sku, name, description, category, base_unit, base_price_inr, stock_quantity, seller_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          ON CONFLICT (sku) DO NOTHING`,
-        [prod.sku, prod.name, prod.description, prod.category, prod.base_unit, prod.base_price_inr, prod.stock_quantity]
+        [prod.sku, prod.name, prod.description, prod.category, prod.base_unit, prod.base_price_inr, prod.stock_quantity, sellerId]
       );
     }
 
@@ -131,7 +141,8 @@ export async function GET(request: Request) {
       message: 'Database initialized and seeded successfully.',
       users: {
         admin: 'admin@asamed.com (pwd: admin123)',
-        seller: 'seller@asamed.com (pwd: seller123)'
+        seller: 'seller@asamed.com (pwd: seller123)',
+        user: 'user@asamed.com (pwd: user123)'
       },
       productsSeeded: productsSeed.length,
       resetApplied: forceReset || !alreadyInit

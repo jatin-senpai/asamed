@@ -8,7 +8,7 @@ const JWT_SECRET = new TextEncoder().encode(
 export interface SessionUser {
   id: number;
   email: string;
-  role: 'admin' | 'seller';
+  role: 'admin' | 'seller' | 'user';
   name: string;
 }
 

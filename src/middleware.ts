@@ -30,21 +30,29 @@ export async function middleware(request: NextRequest) {
       if (pathname === '/dashboard') {
         if (role === 'admin') {
           return NextResponse.redirect(new URL('/dashboard/admin/products', request.url));
-        } else {
+        } else if (role === 'seller') {
           return NextResponse.redirect(new URL('/dashboard/seller/products', request.url));
+        } else {
+          return NextResponse.redirect(new URL('/dashboard/user/products', request.url));
         }
       }
 
       // Check admin permissions
       if (pathname.startsWith('/dashboard/admin') && role !== 'admin') {
-        // Sellers trying to access admin dashboard: redirect to seller home
-        return NextResponse.redirect(new URL('/dashboard/seller/products', request.url));
+        const dest = role === 'seller' ? '/dashboard/seller/products' : '/dashboard/user/products';
+        return NextResponse.redirect(new URL(dest, request.url));
       }
 
       // Check seller permissions
       if (pathname.startsWith('/dashboard/seller') && role !== 'seller') {
-        // Admins trying to access seller dashboard: redirect to admin home
-        return NextResponse.redirect(new URL('/dashboard/admin/products', request.url));
+        const dest = role === 'admin' ? '/dashboard/admin/products' : '/dashboard/user/products';
+        return NextResponse.redirect(new URL(dest, request.url));
+      }
+
+      // Check user permissions
+      if (pathname.startsWith('/dashboard/user') && role !== 'user') {
+        const dest = role === 'admin' ? '/dashboard/admin/products' : '/dashboard/seller/products';
+        return NextResponse.redirect(new URL(dest, request.url));
       }
 
       return NextResponse.next();
@@ -65,8 +73,10 @@ export async function middleware(request: NextRequest) {
       const role = payload.role as string;
       if (role === 'admin') {
         return NextResponse.redirect(new URL('/dashboard/admin/products', request.url));
-      } else {
+      } else if (role === 'seller') {
         return NextResponse.redirect(new URL('/dashboard/seller/products', request.url));
+      } else {
+        return NextResponse.redirect(new URL('/dashboard/user/products', request.url));
       }
     } catch (e) {
       // If token is invalid, let them access login page

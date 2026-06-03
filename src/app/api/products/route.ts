@@ -13,26 +13,36 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('q') || '';
     const category = searchParams.get('category') || '';
+    const sellerOnly = searchParams.get('seller_only') === 'true' || user.role === 'seller';
 
-    let sql = 'SELECT * FROM products';
+    let sql = `
+      SELECT p.*, u.name as seller_name, u.email as seller_email 
+      FROM products p
+      LEFT JOIN users u ON p.seller_id = u.id
+    `;
     const params: any[] = [];
     const conditions: string[] = [];
 
     if (search) {
       params.push(`%${search}%`);
-      conditions.push(`(name ILIKE $${params.length} OR sku ILIKE $${params.length} OR description ILIKE $${params.length})`);
+      conditions.push(`(p.name ILIKE $${params.length} OR p.sku ILIKE $${params.length} OR p.description ILIKE $${params.length})`);
     }
 
     if (category) {
       params.push(category);
-      conditions.push(`category = $${params.length}`);
+      conditions.push(`p.category = $${params.length}`);
+    }
+
+    if (sellerOnly) {
+      params.push(user.id);
+      conditions.push(`p.seller_id = $${params.length}`);
     }
 
     if (conditions.length > 0) {
       sql += ' WHERE ' + conditions.join(' AND ');
     }
 
-    sql += ' ORDER BY name ASC';
+    sql += ' ORDER BY p.name ASC';
 
     const result = await query(sql, params);
     return NextResponse.json(result.rows);
@@ -42,12 +52,12 @@ export async function GET(request: Request) {
   }
 }
 
-// POST /api/products - Create new product (Admin only)
+// POST /api/products - Create new product (Admin or Seller)
 export async function POST(request: Request) {
   try {
     const user = await getSessionUser();
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden. Admin access required.' }, { status: 403 });
+    if (!user || (user.role !== 'admin' && user.role !== 'seller')) {
+      return NextResponse.json({ error: 'Forbidden. Admin or Seller access required.' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -64,8 +74,8 @@ export async function POST(request: Request) {
     }
 
     const result = await query(
-      `INSERT INTO products (sku, name, description, category, base_unit, base_price_inr, stock_quantity)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO products (sku, name, description, category, base_unit, base_price_inr, stock_quantity, seller_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
       [
         sku.toUpperCase().trim(),
@@ -74,7 +84,8 @@ export async function POST(request: Request) {
         category || 'Uncategorized',
         base_unit,
         base_price_inr,
-        stock_quantity || 0
+        stock_quantity || 0,
+        user.id
       ]
     );
 

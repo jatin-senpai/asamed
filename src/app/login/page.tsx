@@ -57,14 +57,17 @@ export default function LoginPage() {
     }
   };
 
-  const handlePrefill = (role: 'admin' | 'seller') => {
+  const handlePrefill = (role: 'admin' | 'seller' | 'user') => {
     setError(null);
     if (role === 'admin') {
       setEmail('admin@asamed.com');
       setPassword('admin123');
-    } else {
+    } else if (role === 'seller') {
       setEmail('seller@asamed.com');
       setPassword('seller123');
+    } else {
+      setEmail('user@asamed.com');
+      setPassword('user123');
     }
   };
 
@@ -221,27 +224,36 @@ export default function LoginPage() {
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', fontWeight: 600 }}>
             Demo / Evaluator Quick Access
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
             <button
               type="button"
               onClick={() => handlePrefill('admin')}
               className="btn btn-secondary"
-              style={{ padding: '0.5rem', fontSize: '0.8rem', justifyContent: 'center' }}
+              style={{ padding: '0.5rem', fontSize: '0.75rem', justifyContent: 'center' }}
             >
-              Prefill Admin
+              Admin
             </button>
             <button
               type="button"
               onClick={() => handlePrefill('seller')}
               className="btn btn-secondary"
-              style={{ padding: '0.5rem', fontSize: '0.8rem', justifyContent: 'center' }}
+              style={{ padding: '0.5rem', fontSize: '0.75rem', justifyContent: 'center' }}
             >
-              Prefill Seller
+              Seller
+            </button>
+            <button
+              type="button"
+              onClick={() => handlePrefill('user')}
+              className="btn btn-secondary"
+              style={{ padding: '0.5rem', fontSize: '0.75rem', justifyContent: 'center' }}
+            >
+              User
             </button>
           </div>
           <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
             <div>Admin: <code style={{ color: 'var(--text-secondary)' }}>admin@asamed.com</code> / <code style={{ color: 'var(--text-secondary)' }}>admin123</code></div>
             <div>Seller: <code style={{ color: 'var(--text-secondary)' }}>seller@asamed.com</code> / <code style={{ color: 'var(--text-secondary)' }}>seller123</code></div>
+            <div>User: <code style={{ color: 'var(--text-secondary)' }}>user@asamed.com</code> / <code style={{ color: 'var(--text-secondary)' }}>user123</code></div>
           </div>
         </div>
 

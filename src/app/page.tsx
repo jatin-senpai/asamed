@@ -13,8 +13,10 @@ export default function Home() {
       if (user) {
         if (user.role === 'admin') {
           router.push('/dashboard/admin/products');
-        } else {
+        } else if (user.role === 'seller') {
           router.push('/dashboard/seller/products');
+        } else {
+          router.push('/dashboard/user/products');
         }
       } else {
         router.push('/login');
